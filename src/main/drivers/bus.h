@@ -81,6 +81,8 @@ typedef enum {
     DEVHW_BMI160,
     DEVHW_BMI088_GYRO,
     DEVHW_BMI088_ACC,
+    DEVHW_BMI055_GYRO,
+    DEVHW_BMI055_ACC,
     DEVHW_ICM20689,
     DEVHW_ICM42605,
     DEVHW_BMI270,
@@ -143,6 +145,7 @@ typedef enum {
     DEVHW_DLVR,         // Pitot meter
     DEVHW_M25P16,       // SPI NOR flash
     DEVHW_W25N,         // SPI 128MB or 256MB flash from Winbond W25N family
+    DEVHW_RAMTRON,      // SPI FRAM (Ferroelectric RAM)
     DEVHW_UG2864,       // I2C OLED display
     DEVHW_SDCARD,       // Generic SD-Card
     DEVHW_IRLOCK,       // IR-Lock visual positioning hardware
