@@ -17,8 +17,13 @@
 
 #pragma once
 
-#define TARGET_BOARD_IDENTIFIER "PH6C"
-#define USBD_PRODUCT_STRING     "Pixhawk6C"
+#ifdef PIXHAWK6C_MINI
+  #define TARGET_BOARD_IDENTIFIER "P6CM"
+  #define USBD_PRODUCT_STRING     "Pixhawk6C_Mini"
+#else
+  #define TARGET_BOARD_IDENTIFIER "PH6C"
+  #define USBD_PRODUCT_STRING     "Pixhawk6C"
+#endif
 
 // LED indicators (active low)
 #define LED0                    PD10    // Red LED
@@ -35,9 +40,11 @@
 #define UART1_TX_PIN            PB6
 #define UART1_RX_PIN            PA10
 
-#define USE_UART2               // Telem3
-#define UART2_TX_PIN            PD5
-#define UART2_RX_PIN            PA3
+#ifndef PIXHAWK6C_MINI
+  #define USE_UART2             // Telem3 - standard variant only
+  #define UART2_TX_PIN          PD5
+  #define UART2_RX_PIN          PA3
+#endif
 
 #define USE_UART3               // Debug
 #define UART3_TX_PIN            PD8
@@ -61,7 +68,11 @@
 #define UART8_TX_PIN            PE1
 #define UART8_RX_PIN            PE0
 
-#define SERIAL_PORT_COUNT       9
+#ifdef PIXHAWK6C_MINI
+  #define SERIAL_PORT_COUNT     8   // No UART2/TELEM3 on Mini
+#else
+  #define SERIAL_PORT_COUNT     9
+#endif
 
 // I2C buses
 #define USE_I2C
@@ -174,8 +185,12 @@
                                  FEATURE_VBAT | \
                                  FEATURE_BLACKBOX)
 
-// PWM outputs (8 channels)
-#define MAX_PWM_OUTPUT_PORTS    8
+// PWM outputs
+#ifdef PIXHAWK6C_MINI
+  #define MAX_PWM_OUTPUT_PORTS  6   // Mini has 6 FMU outputs
+#else
+  #define MAX_PWM_OUTPUT_PORTS  8   // Standard has 8 FMU outputs
+#endif
 
 // GPIO port masks
 #define TARGET_IO_PORTA         0xffff

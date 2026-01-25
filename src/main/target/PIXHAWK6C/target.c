@@ -35,17 +35,19 @@ BUSDEV_REGISTER_SPI_TAG(busdev_bmi055_acc,  DEVHW_BMI055_ACC,   BUS_SPI1,       
 // FRAM storage on SPI2
 BUSDEV_REGISTER_SPI(busdev_ramtron, DEVHW_RAMTRON, RAMTRON_SPI_BUS, RAMTRON_CS_PIN, NONE, DEVFLAGS_NONE, 0);
 
-// PWM timer hardware - 8 outputs + beeper
+// PWM timer hardware - 6 or 8 outputs depending on variant + beeper
 timerHardware_t timerHardware[] = {
-    // PWM outputs (8 channels) - DMA_OPT 0, output indices 0-7
+    // PWM outputs - DMA_OPT 0, output indices 0-5 (Mini) or 0-7 (Standard)
     DEF_TIM(TIM1,  CH1, PA8,  TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM1
     DEF_TIM(TIM1,  CH2, PE11, TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM2
     DEF_TIM(TIM1,  CH3, PE13, TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM3
     DEF_TIM(TIM1,  CH4, PE14, TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM4
     DEF_TIM(TIM4,  CH3, PD14, TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM5
     DEF_TIM(TIM4,  CH4, PD15, TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM6
-    DEF_TIM(TIM5,  CH1, PA0,  TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM7
-    DEF_TIM(TIM5,  CH2, PA1,  TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM8
+#ifndef PIXHAWK6C_MINI
+    DEF_TIM(TIM5,  CH1, PA0,  TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM7 - standard only
+    DEF_TIM(TIM5,  CH2, PA1,  TIM_USE_OUTPUT_AUTO, 0, 0),  // PWM8 - standard only
+#endif
 
     // Beeper PWM
     DEF_TIM(TIM3,  CH3, PB0,  TIM_USE_BEEPER, 0, 0),
