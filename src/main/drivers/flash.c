@@ -31,6 +31,7 @@
 #include "flash.h"
 #include "flash_m25p16.h"
 #include "flash_w25n.h"
+#include "flash_ramtron.h"
 
 #include "common/time.h"
 
@@ -41,6 +42,20 @@
 static flashDriver_t flashDrivers[] = {
 
 #ifdef USE_SPI
+
+#ifdef USE_FLASH_RAMTRON
+    {
+        .init = ramtron_init,
+        .isReady = ramtron_isReady,
+        .waitForReady = ramtron_waitForReady,
+        .eraseSector = ramtron_eraseSector,
+        .eraseCompletely = ramtron_eraseCompletely,
+        .pageProgram = ramtron_pageProgram,
+        .readBytes = ramtron_readBytes,
+        .getGeometry = ramtron_getGeometry,
+        .flush = NULL
+    },
+#endif
 
 #ifdef USE_FLASH_M25P16
     {
