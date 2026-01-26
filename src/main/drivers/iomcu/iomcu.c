@@ -136,9 +136,23 @@ static bool iomcuWriteRegisters(uint8_t page, uint8_t offset, uint8_t count, con
 static bool iomcuCheckFirmware(void)
 {
     // Read firmware CRC from IOMCU
-    // TODO: Implement CRC32 firmware verification
-    // For now, always force firmware upload on first boot
-    iomcu.firmwareOk = false;
+    uint16_t crcRegs[2];
+    if (!iomcuReadRegisters(PAGE_SETUP, REG_SETUP_CRC_LOW, 2, crcRegs)) {
+        return false;
+    }
+
+    uint32_t iomcuCrc = crcRegs[0] | ((uint32_t)crcRegs[1] << 16);
+
+    // Calculate expected CRC of embedded firmware
+    uint32_t expectedCrc = crc32_calculate(iomcu_firmware_bin, iomcu_firmware_bin_size);
+
+    // Pad to flash size with 0xFF
+    uint8_t padByte = 0xFF;
+    for (uint32_t i = iomcu_firmware_bin_size; i < IOMCU_FLASH_SIZE; i++) {
+        expectedCrc = crc32_calculate_part(&padByte, 1, expectedCrc);
+    }
+
+    iomcu.firmwareOk = (iomcuCrc == expectedCrc);
     return iomcu.firmwareOk;
 }
 

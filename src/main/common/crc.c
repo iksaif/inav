@@ -143,3 +143,41 @@ uint8_t crc8_sum_update(uint8_t crc, const void *data, uint32_t length)
     }
     return crc;
 }
+
+// CRC32 - standard polynomial 0xEDB88320 (reversed 0x04C11DB7)
+// Used in ZIP, Ethernet, PNG, etc.
+uint32_t crc32(uint32_t crc, uint8_t a)
+{
+    crc ^= a;
+    for (int i = 0; i < 8; i++) {
+        if (crc & 1) {
+            crc = (crc >> 1) ^ 0xEDB88320;
+        } else {
+            crc = crc >> 1;
+        }
+    }
+    return crc;
+}
+
+uint32_t crc32_update(uint32_t crc, const void *data, uint32_t length)
+{
+    const uint8_t *p = (const uint8_t *)data;
+    const uint8_t *pend = p + length;
+
+    for (; p != pend; p++) {
+        crc = crc32(crc, *p);
+    }
+    return crc;
+}
+
+uint32_t crc32_calculate(const void *data, uint32_t length)
+{
+    // Start with 0xFFFFFFFF and invert result (standard CRC32)
+    return ~crc32_update(0xFFFFFFFF, data, length);
+}
+
+uint32_t crc32_calculate_part(const void *data, uint32_t length, uint32_t crc)
+{
+    // Continue calculation with inverted CRC
+    return crc32_update(~crc, data, length);
+}

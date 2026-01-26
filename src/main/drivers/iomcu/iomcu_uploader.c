@@ -116,8 +116,6 @@ static bool uploaderProgram(serialPort_t *serial, uint32_t address, const uint8_
     return (resp1 == PROTO_INSYNC && resp2 == PROTO_OK);
 }
 
-// TODO: Re-enable when CRC32 verification is implemented
-__attribute__((unused))
 static bool uploaderGetCrc(serialPort_t *serial, uint32_t *crc)
 {
     uploaderSendByte(serial, PROTO_GET_CRC);
@@ -198,9 +196,26 @@ bool iomcuUploaderUpload(serialPort_t *serial, const uint8_t *firmware, uint32_t
 
     LOG_INFO(IOMCU, "Bootloader rev: %lu", blRev);
 
-    // TODO: Implement CRC32 verification to skip upload if firmware matches
-    // For now, always upload firmware
-    (void)blRev;  // Unused for now
+    // For rev 3+, check if firmware already matches
+    if (blRev >= 3) {
+        uint32_t currentCrc;
+        if (uploaderGetCrc(serial, &currentCrc)) {
+            uint32_t expectedCrc = crc32_calculate(firmware, size);
+
+            // Pad to flash size
+            uint8_t padByte = 0xFF;
+            for (uint32_t i = size; i < IOMCU_FLASH_SIZE; i++) {
+                expectedCrc = crc32_calculate_part(&padByte, 1, expectedCrc);
+            }
+
+            if (currentCrc == expectedCrc) {
+                LOG_INFO(IOMCU, "Firmware already up to date");
+                uploaderReboot(serial);
+                serialSetBaudRate(serial, IOMCU_BAUD_RATE);
+                return true;
+            }
+        }
+    }
 
     // Erase flash
     LOG_INFO(IOMCU, "Erasing flash...");
@@ -232,9 +247,32 @@ bool iomcuUploaderUpload(serialPort_t *serial, const uint8_t *firmware, uint32_t
         }
     }
 
-    // TODO: Implement CRC32 firmware verification
-    // For now, skip verification step
-    LOG_INFO(IOMCU, "Firmware upload complete (verification skipped)");
+    // Verify firmware (for rev 3+ use CRC, otherwise skip)
+    if (blRev >= 3) {
+        LOG_INFO(IOMCU, "Verifying firmware...");
+        uint32_t flashCrc;
+        if (!uploaderGetCrc(serial, &flashCrc)) {
+            LOG_ERROR(IOMCU, "CRC read failed");
+            serialSetBaudRate(serial, IOMCU_BAUD_RATE);
+            return false;
+        }
+
+        uint32_t expectedCrc = crc32_calculate(firmware, size);
+
+        // Pad to flash size
+        uint8_t padByte = 0xFF;
+        for (uint32_t i = size; i < IOMCU_FLASH_SIZE; i++) {
+            expectedCrc = crc32_calculate_part(&padByte, 1, expectedCrc);
+        }
+
+        if (flashCrc != expectedCrc) {
+            LOG_ERROR(IOMCU, "CRC mismatch: expected 0x%08lX, got 0x%08lX", expectedCrc, flashCrc);
+            serialSetBaudRate(serial, IOMCU_BAUD_RATE);
+            return false;
+        }
+
+        LOG_INFO(IOMCU, "Firmware verified");
+    }
 
     // Reboot to application
     LOG_INFO(IOMCU, "Rebooting IOMCU...");

@@ -110,6 +110,14 @@ static struct {
 // External references
 extern bool safetyIsOff(void);
 
+static inline void setTimerChannels(TIM_TypeDef *tim, uint16_t ch1, uint16_t ch2, uint16_t ch3, uint16_t ch4)
+{
+    tim->CCR1 = ch1;
+    tim->CCR2 = ch2;
+    tim->CCR3 = ch3;
+    tim->CCR4 = ch4;
+}
+
 static void gpioInit(void)
 {
     // Enable GPIO clocks
@@ -144,10 +152,7 @@ static void timerInitPwm(TIM_TypeDef *tim, uint16_t period)
     tim->CCER = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
     // Initialize CCR to neutral (1.5ms)
-    tim->CCR1 = 1500;
-    tim->CCR2 = 1500;
-    tim->CCR3 = 1500;
-    tim->CCR4 = 1500;
+    setTimerChannels(tim, 1500, 1500, 1500, 1500);
 
     // Enable auto-reload preload
     tim->CR1 = TIM_CR1_ARPE;
@@ -181,10 +186,7 @@ static void timerInitDshot(TIM_TypeDef *tim, uint32_t frequency)
     tim->CCER = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 
     // Initialize to idle (no pulse)
-    tim->CCR1 = 0;
-    tim->CCR2 = 0;
-    tim->CCR3 = 0;
-    tim->CCR4 = 0;
+    setTimerChannels(tim, 0, 0, 0, 0);
 
     // Enable DMA requests on update
     tim->DIER = TIM_DIER_UDE;
@@ -376,15 +378,8 @@ void pwmUpdate(void)
         dshotTrigger(TIM4, &DMA1->channels[0], dshotDmaBufferTim4, 4);
     } else {
         // Standard PWM or OneShot - direct CCR write
-        TIM1->CCR1 = pwmValues[0];
-        TIM1->CCR2 = pwmValues[1];
-        TIM1->CCR3 = pwmValues[2];
-        TIM1->CCR4 = pwmValues[3];
-
-        TIM4->CCR1 = pwmValues[4];
-        TIM4->CCR2 = pwmValues[5];
-        TIM4->CCR3 = pwmValues[6];
-        TIM4->CCR4 = pwmValues[7];
+        setTimerChannels(TIM1, pwmValues[0], pwmValues[1], pwmValues[2], pwmValues[3]);
+        setTimerChannels(TIM4, pwmValues[4], pwmValues[5], pwmValues[6], pwmValues[7]);
     }
 }
 
@@ -393,25 +388,11 @@ void pwmDisableAll(void)
     // Set all outputs to neutral/idle
     if (pwm.mode >= PWM_MODE_DSHOT150) {
         // DShot idle (zero throttle)
-        TIM1->CCR1 = 0;
-        TIM1->CCR2 = 0;
-        TIM1->CCR3 = 0;
-        TIM1->CCR4 = 0;
-
-        TIM4->CCR1 = 0;
-        TIM4->CCR2 = 0;
-        TIM4->CCR3 = 0;
-        TIM4->CCR4 = 0;
+        setTimerChannels(TIM1, 0, 0, 0, 0);
+        setTimerChannels(TIM4, 0, 0, 0, 0);
     } else {
         // PWM neutral (1.5ms)
-        TIM1->CCR1 = 1500;
-        TIM1->CCR2 = 1500;
-        TIM1->CCR3 = 1500;
-        TIM1->CCR4 = 1500;
-
-        TIM4->CCR1 = 1500;
-        TIM4->CCR2 = 1500;
-        TIM4->CCR3 = 1500;
-        TIM4->CCR4 = 1500;
+        setTimerChannels(TIM1, 1500, 1500, 1500, 1500);
+        setTimerChannels(TIM4, 1500, 1500, 1500, 1500);
     }
 }
