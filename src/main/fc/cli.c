@@ -4036,6 +4036,41 @@ static const char * getBatteryStateString(void)
     return batteryStateStrings[getBatteryState()];
 }
 
+#ifdef USE_IOMCU
+static void cliIomcu(char *cmdline)
+{
+    if (isEmpty(cmdline)) {
+        // Status
+        if (!iomcuIsInitialized()) {
+            cliPrintLine("IOMCU: Not initialized");
+            return;
+        }
+
+        cliPrintLinef("IOMCU: %s", iomcuIsHealthy() ? "OK" : "UNHEALTHY");
+        cliPrintLinef("Safety: %s", iomcuIsSafetyOff() ? "OFF" : "ON");
+        cliPrintLinef("Channels: %d", iomcuGetChannelCount());
+    }
+    else if (strcasecmp(cmdline, "update") == 0) {
+        cliPrintLine("Forcing firmware update...");
+        if (iomcuForceUpdate()) {
+            cliPrintLine("Update successful");
+        } else {
+            cliPrintLine("Update failed");
+        }
+    }
+    else if (strcasecmp(cmdline, "safety_off") == 0) {
+        iomcuForceSafetyOff();
+        cliPrintLine("Safety forced off");
+    }
+    else {
+        cliPrintLine("Usage:");
+        cliPrintLine("  iomcu              - Show status");
+        cliPrintLine("  iomcu update       - Force firmware update");
+        cliPrintLine("  iomcu safety_off   - Force safety switch off");
+    }
+}
+#endif
+
 static void cliStatus(char *cmdline)
 {
     UNUSED(cmdline);
@@ -4878,6 +4913,9 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("gpssats", "show GPS satellites", NULL, cliUbloxPrintSatelites),
 #endif
     CLI_COMMAND_DEF("help", NULL, NULL, cliHelp),
+#ifdef USE_IOMCU
+    CLI_COMMAND_DEF("iomcu", "IOMCU status and control", "[status|update|safety_off]", cliIomcu),
+#endif
 #ifdef USE_LED_STRIP
     CLI_COMMAND_DEF("led", "configure leds", NULL, cliLed),
     CLI_COMMAND_DEF("ledpinpwm", "start/stop PWM on LED pin, 0..100 duty ratio", "[<value>]\r\n", cliLedPinPWM),

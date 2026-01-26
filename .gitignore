@@ -46,3 +46,6 @@ launch.json
 # Assitnow token and files for test script
 tokens.yaml
 *.ubx
+
+# PixHawk 6c documentation
+/pixhawk6c-docs/

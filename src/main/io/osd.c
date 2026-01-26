@@ -64,6 +64,10 @@
 #include "drivers/vtx_common.h"
 #include "drivers/gimbal_common.h"
 
+#ifdef USE_IOMCU
+#include "drivers/iomcu/iomcu.h"
+#endif
+
 #include "io/adsb.h"
 #include "io/flashfs.h"
 #include "io/gps.h"
@@ -931,6 +935,11 @@ static const char * osdArmingDisabledReasonMessage(void)
                 if (!HW_SENSOR_IS_HEALTHY(getHwPitotmeterStatus())) {
                     return OSD_MESSAGE_STR(OSD_MSG_PITOT_FAIL);
                 }
+#ifdef USE_IOMCU
+                if (iomcuIsInitialized() && !iomcuIsHealthy()) {
+                    return OSD_MESSAGE_STR(OSD_MSG_IOMCU_LOST);
+                }
+#endif
             }
             return OSD_MESSAGE_STR(OSD_MSG_HW_FAIL);
         case ARMING_DISABLED_BOXFAILSAFE:
