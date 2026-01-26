@@ -116,6 +116,8 @@ static bool uploaderProgram(serialPort_t *serial, uint32_t address, const uint8_
     return (resp1 == PROTO_INSYNC && resp2 == PROTO_OK);
 }
 
+// TODO: Re-enable when CRC32 verification is implemented
+__attribute__((unused))
 static bool uploaderGetCrc(serialPort_t *serial, uint32_t *crc)
 {
     uploaderSendByte(serial, PROTO_GET_CRC);

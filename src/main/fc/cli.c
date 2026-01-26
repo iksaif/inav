@@ -70,6 +70,10 @@ bool cliMode = false;
 #include "drivers/vtx_common.h"
 #include "drivers/light_ws2811strip.h"
 
+#ifdef USE_IOMCU
+#include "drivers/iomcu/iomcu.h"
+#endif
+
 #include "fc/fc_core.h"
 #include "fc/cli.h"
 #include "fc/config.h"
