@@ -36,3 +36,8 @@ uint8_t crc8(uint8_t crc, uint8_t a);
 uint8_t crc8_update(uint8_t crc, const void *data, uint32_t length);
 
 uint8_t crc8_sum_update(uint8_t crc, const void *data, uint32_t length);
+
+uint32_t crc32(uint32_t crc, uint8_t a);
+uint32_t crc32_update(uint32_t crc, const void *data, uint32_t length);
+uint32_t crc32_calculate(const void *data, uint32_t length);
+uint32_t crc32_calculate_part(const void *data, uint32_t length, uint32_t crc);
