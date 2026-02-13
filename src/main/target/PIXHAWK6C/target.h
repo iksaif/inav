@@ -59,7 +59,7 @@
 #define UART6_RX_PIN            PC7
 
 // IOMCU coprocessor support (optional, provides 8 additional PWM channels)
-#define USE_IOMCU
+// USE_IOMCU is defined by CMake when enabled (default: ON, disable with -DDISABLE_IOMCU=ON)
 
 #define USE_UART7               // Telem1 (with flow control)
 #define UART7_TX_PIN            PE8
