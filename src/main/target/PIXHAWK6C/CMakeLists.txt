@@ -16,6 +16,12 @@ endif()
 target_stm32h743xi(PIXHAWK6C HSE_MHZ 16 LINKER_SCRIPT ${PIXHAWK6C_LINKER_SCRIPT})
 target_stm32h743xi(PIXHAWK6C_MINI HSE_MHZ 16 LINKER_SCRIPT ${PIXHAWK6C_LINKER_SCRIPT})
 
+if(USE_ARDUPILOT_BOOTLOADER)
+    # Relocate vector table to 0x08020000 (128KB bootloader offset)
+    target_compile_definitions(PIXHAWK6C.elf PRIVATE VECT_TAB_OFFSET=0x20000)
+    target_compile_definitions(PIXHAWK6C_MINI.elf PRIVATE VECT_TAB_OFFSET=0x20000)
+endif()
+
 if(NOT DISABLE_IOMCU)
     # Include IOMCU firmware build support
     include(iomcu-firmware)

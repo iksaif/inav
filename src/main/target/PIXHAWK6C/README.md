@@ -146,13 +146,97 @@ Both variants support the same core functionality with auto-detection of hardwar
 ## Build Targets
 
 ```bash
+# Standard builds
 make PIXHAWK6C        # Standard variant (8 PWM, 9 UARTs)
 make PIXHAWK6C_MINI   # Mini variant (6 PWM, 8 UARTs)
 ```
 
+### CMake Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `DISABLE_IOMCU` | `OFF` | Disable IOMCU coprocessor support (fewer PWM channels) |
+| `USE_ARDUPILOT_BOOTLOADER` | `OFF` | Build firmware compatible with ArduPilot/PX4 128KB bootloader |
+
+```bash
+# Build without IOMCU (for initial testing)
+cmake -DDISABLE_IOMCU=ON ..
+
+# Build for ArduPilot bootloader (firmware at 0x08020000)
+cmake -DUSE_ARDUPILOT_BOOTLOADER=ON ..
+
+# Both options combined
+cmake -DUSE_ARDUPILOT_BOOTLOADER=ON -DDISABLE_IOMCU=ON ..
+```
+
+### Memory Layout
+
+| Build Mode | Bootloader | INAV Start | Firmware Space |
+|------------|------------|------------|----------------|
+| Standalone (default) | None | 0x08000000 | 1792 KB |
+| ArduPilot Bootloader | 128KB at 0x08000000 | 0x08020000 | 1664 KB |
+
+## Flashing Firmware
+
+### Method 1: ArduPilot Bootloader (Recommended if bootloader is installed)
+
+The ArduPilot bootloader provides a 5-second upload window on every power-up.
+Firmware must be converted to `.apj` format for the bootloader protocol.
+
+```bash
+# 1. Build bootloader-compatible firmware
+cmake -DUSE_ARDUPILOT_BOOTLOADER=ON -DDISABLE_IOMCU=ON ..
+make PIXHAWK6C_MINI -j8
+
+# 2. Convert to APJ format (zlib-compressed, board_id=56)
+python3 src/utils/bin2apj.py build/inav_*.bin build/firmware.apj
+
+# 3. Flash (auto-detects board, reboots to bootloader, flashes)
+python3 src/utils/flash-inav.py flash build/firmware.apj
+
+# Or just scan for connected boards:
+python3 src/utils/flash-inav.py scan
+```
+
+**Requirements:** `pip install pyserial pymavlink`
+
+### Method 2: DFU Mode
+
+```bash
+# Enter DFU mode via INAV CLI: type 'dfu'
+# Or via ArduPilot: send MAVLink reboot-to-bootloader command
+dfu-util -d 0483:df11 --alt 0 -s 0x08000000:mass-erase:force:leave \
+  -D build/inav_9.0.0_PIXHAWK6C_MINI.hex
+```
+
+### Method 3: ST-Link via Debug Port
+
+```bash
+openocd -f interface/stlink.cfg -f target/stm32h7x.cfg \
+  -c "program build/inav_9.0.0_PIXHAWK6C_MINI.hex verify reset exit"
+```
+
+### Flash Tools
+
+| Script | Location | Description |
+|--------|----------|-------------|
+| `flash-inav.py` | `src/utils/` | All-in-one flash tool (scan, reboot, flash) |
+| `bin2apj.py` | `src/utils/` | Convert .bin to ArduPilot .apj format |
+| `check-firmware.py` | `src/utils/` | Detect firmware on connected serial ports |
+
+### Notes on Pixhawk 6C Mini
+
+- **No physical bootloader/DFU button** - must use software entry
+- ArduPilot bootloader can be entered via MAVLink reboot command (param1=3)
+- R10/C36 jumper pads for hardware DFU entry (invasive, requires opening case)
+- 6-pin debug port supports ST-Link programming (recommended recovery method)
+
 ## TODO - Missing Features
 
 The following features are present in hardware but not yet implemented in INAV:
+
+### High Priority
+- [ ] Debug and fix boot sequence with ArduPilot bootloader (VTOR relocation)
 
 ### Medium Priority
 - [ ] Add PID-based IMU heater control for thermal stability
@@ -166,14 +250,14 @@ The following features are present in hardware but not yet implemented in INAV:
 ## Notes
 
 - **Hardware Auto-Detection**: BMI055 (Rev 0/1) vs BMI088 (Rev 2) is automatically detected at boot. No user configuration required.
-- **IOMCU Support**: Full IOMCU coprocessor support with automatic firmware updates, 8 additional PWM outputs, DShot support, and hardware safety switch functionality.
+- **IOMCU Support**: Full IOMCU coprocessor support with automatic firmware updates, 8 additional PWM outputs, DShot support, and hardware safety switch functionality. Can be disabled with `-DDISABLE_IOMCU=ON`.
 - **Failsafe Operation**: IOMCU provides independent failsafe with 1-second FMU watchdog. If FMU communication is lost, IOMCU maintains last valid PWM values.
 - **CAN Bus**: Pins are defined but protocol stack is not implemented. Cannot use CAN peripherals.
 - **Build Size**: ~656KB firmware (36% of 2MB flash).
 
 ## Implementation Status
 
-Core implementation complete and ready for hardware testing:
+Core implementation complete, hardware testing in progress:
 - ✅ All critical drivers implemented (FRAM, ICM-42688P, BMI055, BMI088)
 - ✅ Dual IMU with auto-detection
 - ✅ All UARTs, I2C, SPI buses configured
@@ -185,8 +269,10 @@ Core implementation complete and ready for hardware testing:
 - ✅ SD card blackbox logging
 - ✅ Dual battery monitoring
 - ✅ Both Standard and Mini variants
-
-See project documentation for detailed feature roadmap.
+- ✅ ArduPilot bootloader-compatible build option
+- ✅ Flash tooling (flash-inav.py, bin2apj.py)
+- WIP: Boot with ArduPilot bootloader (VTOR relocation debugging)
+- Pending: Hardware flight testing
 
 ### IOMCU Features
 
@@ -201,6 +287,25 @@ The IOMCU implementation provides professional-grade I/O expansion:
 
 Use `iomcu` CLI command to check status or force firmware updates.
 
+## Debugging
+
+### Boot Debug via Debug UART
+
+The 6-pin debug port (JST-SH 1mm) provides UART3 output:
+```
+Pin 1: +3.3V  (don't connect)
+Pin 2: TX (PD8) -> adapter RX
+Pin 3: RX (PD9) -> adapter TX
+Pin 6: GND     -> adapter GND
+```
+
+Connect a USB-serial adapter (3.3V FTDI/CP2102) and listen at 115200 baud:
+```bash
+screen /dev/cu.usbserial-XXXX 115200
+```
+
+Debug firmware includes boot checkpoint messages (`[BL] SystemInit start`, `[BL] VTOR=...`, etc.) and LED blink patterns.
+
 ---
 
-**Note**: Hardware not yet tested on real hardware. Please report any issues on the INAV GitHub repository.
+**Status**: Hardware testing in progress on Pixhawk 6C Mini.
