@@ -1,0 +1,2 @@
+target_stm32h743xi(PIXHAWK6C HSE_MHZ 16)
+target_stm32h743xi(PIXHAWK6C_MINI HSE_MHZ 16)
