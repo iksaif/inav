@@ -145,6 +145,11 @@ main_sources(STM32H7_SRC
     config/config_streamer_ram.c
     config/config_streamer_extflash.c
 
+    drivers/flash.c
+    drivers/flash_ramtron.c
+    drivers/flash_m25p16.c
+    drivers/flash_w25n.c
+
     drivers/adc_stm32h7xx.c
     drivers/bus_i2c_hal.c
     drivers/dma_stm32h7xx.c
