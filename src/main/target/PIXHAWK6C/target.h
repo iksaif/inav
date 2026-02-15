@@ -58,6 +58,9 @@
 #define UART6_TX_PIN            PC6
 #define UART6_RX_PIN            PC7
 
+// IOMCU coprocessor support (optional, provides 8 additional PWM channels)
+#define USE_IOMCU
+
 #define USE_UART7               // Telem1 (with flow control)
 #define UART7_TX_PIN            PE8
 #define UART7_RX_PIN            PE7
@@ -145,7 +148,7 @@
 #define RAMTRON_SPI_BUS         BUS_SPI2
 #define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT
 
-// ADC - Battery and current monitoring
+// ADC - Battery monitoring, current sensing, and hardware detection
 #define USE_ADC
 #define ADC_INSTANCE                ADC1
 #define ADC_CHANNEL_1_PIN           PC5     // VBAT1
@@ -153,6 +156,8 @@
 #define ADC_CHANNEL_3_PIN           PB1     // VBAT2
 #define ADC_CHANNEL_4_PIN           PA2     // CURR2
 #define ADC_CHANNEL_5_PIN           PA4     // 5V monitor
+#define ADC_CHANNEL_6_PIN           PC0     // HW_VER (hardware version detection)
+#define ADC_CHANNEL_7_PIN           PC1     // HW_REV (hardware revision detection)
 
 #define VBAT_ADC_CHANNEL            ADC_CHN_1
 #define CURRENT_METER_ADC_CHANNEL   ADC_CHN_2
@@ -176,6 +181,22 @@
 // USB support
 #define USE_USB_DETECT
 #define USB_DETECT_PIN              PA9
+
+// Power management and monitoring (active-low control, pull-up sensing)
+#define VDD_3V3_SENSORS_EN_PIN      PB2     // 3.3V sensor rail enable
+#define VDD_5V_PERIPH_EN_PIN        PE2     // 5V peripheral enable (active-low)
+#define VDD_5V_HIPOWER_EN_PIN       PC10    // 5V high-power enable (active-low)
+#define VDD_5V_PERIPH_OC_PIN        PE3     // 5V peripheral overcurrent detect (pull-up)
+#define VDD_5V_HIPOWER_OC_PIN       PC11    // 5V high-power overcurrent detect (pull-up)
+#define VDD_BRICK_VALID_PIN         PA15    // Power brick 1 valid detect (pull-up)
+#define VDD_BRICK2_VALID_PIN        PB12    // Power brick 2 valid detect (pull-up)
+
+// CAN buses
+#define USE_CAN
+#define CAN1_TX_PIN                 PD1
+#define CAN1_RX_PIN                 PD0
+#define CAN2_TX_PIN                 PB13
+#define CAN2_RX_PIN                 PB5
 
 // Features
 #define DEFAULT_FEATURES        (FEATURE_TX_PROF_SEL | \

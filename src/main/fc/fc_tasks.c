@@ -37,6 +37,10 @@
 #include "drivers/gimbal_common.h"
 #include "drivers/headtracker_common.h"
 
+#ifdef USE_IOMCU
+#include "drivers/iomcu/iomcu.h"
+#endif
+
 #include "fc/cli.h"
 #include "fc/config.h"
 #include "fc/fc_core.h"
@@ -738,6 +742,15 @@ cfTask_t cfTasks[TASK_COUNT] = {
         .taskName = "HEADTRACKER",
         .taskFunc = taskUpdateHeadTracker,
         .desiredPeriod = TASK_PERIOD_HZ(50),
+        .staticPriority = TASK_PRIORITY_MEDIUM,
+    },
+#endif
+
+#ifdef USE_IOMCU
+    [TASK_IOMCU] = {
+        .taskName = "IOMCU",
+        .taskFunc = iomcuTask,
+        .desiredPeriod = TASK_PERIOD_HZ(50),      // 50 Hz = 20ms update rate
         .staticPriority = TASK_PRIORITY_MEDIUM,
     },
 #endif
