@@ -112,8 +112,10 @@ void forcedSystemResetWithoutDisablingCaches(void);
 /*!< Uncomment the following line if you need to relocate your vector Table in
      Internal SRAM. */
 /* #define VECT_TAB_SRAM */
+#ifndef VECT_TAB_OFFSET
 #define VECT_TAB_OFFSET  0x00       /*!< Vector Table base offset field.
                                       This value must be a multiple of 0x200. */
+#endif
 /******************************************************************************/
 
 /**
@@ -578,8 +580,96 @@ void systemCheckResetReason(void);
 
 #include "drivers/memprot.h"
 
+// Early debug: toggle Red LED (PD10) using raw registers
+// Call at checkpoints to trace boot progress
+static inline void debugLedInit(void)
+{
+    // Enable GPIOD clock
+    *((volatile uint32_t*)(0x580244E0)) |= (1 << 3);
+    // Brief delay for clock to stabilize
+    for (volatile int i = 0; i < 100; i++);
+    // Set PD10 as output (MODER bits 21:20 = 01)
+    volatile uint32_t *moder = (volatile uint32_t*)0x58020C00;
+    *moder = (*moder & ~(3 << 20)) | (1 << 20);
+    // Set PD11 as output (MODER bits 23:22 = 01)
+    *moder = (*moder & ~(3 << 22)) | (1 << 22);
+}
+
+static inline void debugLedOn(void)
+{
+    // PD10 active-low: reset bit = LED on
+    *((volatile uint32_t*)(0x58020C18)) = (1 << (10 + 16));
+}
+
+static inline void debugLedOff(void)
+{
+    // PD10 active-low: set bit = LED off
+    *((volatile uint32_t*)(0x58020C18)) = (1 << 10);
+}
+
+static inline void debugLedBlink(int count)
+{
+    for (int i = 0; i < count; i++) {
+        debugLedOn();
+        for (volatile int j = 0; j < 500000; j++);
+        debugLedOff();
+        for (volatile int j = 0; j < 500000; j++);
+    }
+}
+
+// Early debug: output a character on UART3 (PD8 TX) at 115200 baud
+// Uses bit-banging before UART is initialized
+static inline void debugUartInit(void)
+{
+    // Enable GPIOD clock (already done in debugLedInit)
+    // Set PD8 as output (MODER bits 17:16 = 01)
+    volatile uint32_t *moder = (volatile uint32_t*)0x58020C00;
+    *moder = (*moder & ~(3 << 16)) | (1 << 16);
+    // Set PD8 high (idle state for UART)
+    *((volatile uint32_t*)(0x58020C18)) = (1 << 8);
+    // Set output speed to high
+    volatile uint32_t *ospeed = (volatile uint32_t*)0x58020C08;
+    *ospeed |= (2 << 16);
+}
+
+static inline void debugUartBitDelay(void)
+{
+    // ~8.7us for 115200 baud at ~64MHz HSI (approximate)
+    for (volatile int i = 0; i < 140; i++);
+}
+
+static inline void debugUartPutc(char c)
+{
+    volatile uint32_t *bsrr = (volatile uint32_t*)0x58020C18;
+    // Start bit (low)
+    *bsrr = (1 << (8 + 16));
+    debugUartBitDelay();
+    // Data bits (LSB first)
+    for (int i = 0; i < 8; i++) {
+        if (c & (1 << i))
+            *bsrr = (1 << 8);       // high
+        else
+            *bsrr = (1 << (8 + 16)); // low
+        debugUartBitDelay();
+    }
+    // Stop bit (high)
+    *bsrr = (1 << 8);
+    debugUartBitDelay();
+    debugUartBitDelay();
+}
+
+static inline void debugUartPuts(const char *s)
+{
+    while (*s) debugUartPutc(*s++);
+}
+
 void SystemInit (void)
 {
+    debugLedInit();
+    debugUartInit();
+    debugUartPuts("[BL] SystemInit start\r\n");
+    debugLedBlink(1);
+
     memProtReset();
 
     initialiseMemorySections();
@@ -660,11 +750,26 @@ void SystemInit (void)
     SCB->VTOR = FLASH_BANK1_BASE | VECT_TAB_OFFSET;       /* Vector Table Relocation in Internal FLASH */
 #endif
 
+    debugUartPuts("[BL] VTOR=0x");
+    // Print VTOR value in hex
+    {
+        uint32_t v = SCB->VTOR;
+        for (int i = 28; i >= 0; i -= 4) {
+            uint8_t nibble = (v >> i) & 0xF;
+            debugUartPutc(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
+        }
+    }
+    debugUartPuts("\r\n");
+    debugLedBlink(2);
+
 #ifdef USE_HAL_DRIVER
+    debugUartPuts("[BL] HAL_Init\r\n");
     HAL_Init();
 #endif
 
+    debugUartPuts("[BL] SystemClock_Config\r\n");
     SystemClock_Config();
+    debugUartPuts("[BL] SystemCoreClockUpdate\r\n");
     SystemCoreClockUpdate();
 
     // Configure MPU
